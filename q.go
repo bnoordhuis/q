@@ -28,6 +28,7 @@ import (
 
 type request struct {
 	Contents content `json:"contents"`
+	System   content `json:"system_instruction"`
 }
 
 type response struct {
@@ -47,9 +48,10 @@ type part struct {
 }
 
 func main() {
-	parts := []part{
+	system := []part{
 		part{Text: "Answer in as few words as possible. Use a brief style with short replies."},
 	}
+	parts := []part{}
 	if !isatty.IsTerminal(os.Stdin.Fd()) {
 		query, err := io.ReadAll(os.Stdin)
 		dieIf(err)
@@ -61,7 +63,7 @@ func main() {
 		part := part{Text: string(query)}
 		parts = append(parts, part)
 	}
-	if len(parts) < 2 {
+	if len(parts) == 0 {
 		os.Exit(1)
 	}
 	home, err := os.UserHomeDir()
@@ -71,7 +73,10 @@ func main() {
 	dieIf(err)
 	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="
 	url += strings.TrimSpace(string(key))
-	body, err := json.Marshal(request{Contents: content{Parts: parts}})
+	body, err := json.Marshal(request{
+		System:   content{Parts: system},
+		Contents: content{Parts: parts},
+	})
 	dieIf(err)
 	r, err := http.Post(url, "application/json", bytes.NewReader(body))
 	dieIf(err)
