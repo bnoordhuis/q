@@ -71,7 +71,7 @@ func main() {
 	filename := path.Join(home, ".q")
 	key, err := os.ReadFile(filename)
 	dieIf(err)
-	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 	body, err := json.Marshal(request{
 		System:   content{Parts: system},
 		Contents: content{Parts: parts},
