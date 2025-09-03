@@ -93,10 +93,16 @@ func main() {
 	dieIf(err)
 	var resp response
 	dieIf(json.Unmarshal(b, &resp))
+	eol := false
 	for _, c := range resp.Candidates {
 		for _, p := range c.Content.Parts {
-			fmt.Printf("%s", p.Text)
+			s := p.Text
+			fmt.Printf("%s", s)
+			eol = strings.HasSuffix(s, "\n")
 		}
+	}
+	if !eol {
+		fmt.Printf("\n")
 	}
 }
 
