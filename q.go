@@ -54,7 +54,7 @@ func main() {
 	parts := []part{}
 	if !isatty.IsTerminal(os.Stdin.Fd()) {
 		query, err := io.ReadAll(os.Stdin)
-		dieIf(err)
+		check(err)
 		part := part{Text: string(query)}
 		parts = append(parts, part)
 	}
@@ -67,32 +67,32 @@ func main() {
 		os.Exit(1)
 	}
 	home, err := os.UserHomeDir()
-	dieIf(err)
+	check(err)
 	filename := path.Join(home, ".q")
 	key, err := os.ReadFile(filename)
-	dieIf(err)
+	check(err)
 	url := "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent"
 	body, err := json.Marshal(request{
 		System:   content{Parts: system},
 		Contents: content{Parts: parts},
 	})
-	dieIf(err)
+	check(err)
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
-	dieIf(err)
+	check(err)
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("x-goog-api-key", strings.TrimSpace(string(key)))
 	client := &http.Client{}
 	res, err := client.Do(req)
-	dieIf(err)
+	check(err)
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		_, _ = io.Copy(os.Stderr, res.Body)
 		os.Exit(1)
 	}
 	b, err := io.ReadAll(res.Body)
-	dieIf(err)
+	check(err)
 	var resp response
-	dieIf(json.Unmarshal(b, &resp))
+	check(json.Unmarshal(b, &resp))
 	eol := false
 	for _, c := range resp.Candidates {
 		for _, p := range c.Content.Parts {
@@ -106,7 +106,7 @@ func main() {
 	}
 }
 
-func dieIf(err error) {
+func check(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "q: %s\n", err)
 		os.Exit(1)
