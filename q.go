@@ -60,7 +60,7 @@ func main() {
 	}
 	query := strings.TrimSpace(strings.Join(os.Args[1:], " "))
 	if query != "" {
-		part := part{Text: string(query)}
+		part := part{Text: query}
 		parts = append(parts, part)
 	}
 	if len(parts) == 0 {
