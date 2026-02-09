@@ -49,7 +49,10 @@ type part struct {
 
 func main() {
 	system := []part{
-		part{Text: "Answer in as few words as possible. Use a brief style with short replies."},
+		part{Text: "Use a brief style with short replies."},
+		part{Text: "Don't use markup unless asked to."},
+		part{Text: "Don't leave out information."},
+		part{Text: "Don't use filler words."},
 	}
 	parts := []part{}
 	if !isatty.IsTerminal(os.Stdin.Fd()) {
