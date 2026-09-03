@@ -6,6 +6,14 @@ import {readFileSync} from "node:fs"
 import {text} from "node:stream/consumers"
 inspect.defaultOptions.depth = 42
 
+const url = "https://generativelanguage.googleapis.com/v1beta/interactions"
+const system = `
+    Use a brief style with short replies.
+    Don't use markup unless asked to.
+    Don't leave out information.
+    Don't use filler words.
+`.trim().replace(/\s+/g, ' ')
+
 const pp = console.log
 let verbose = x => x
 let model
@@ -60,27 +68,29 @@ if (process.stdin.isTTY) {
     input = await text(process.stdin)
 }
 
-const body = verbose({
-    system_instruction: {
-        parts: [
-            {text: "Use a brief style with short replies."},
-            {text: "Don't use markup unless asked to."},
-            {text: "Don't leave out information."},
-            {text: "Don't use filler words."},
-        ],
-    },
-    contents: {
-        parts: [
-            {text: input},
-        ],
-    },
-    tools: {
-        "google_search": {
+const tools = [
+    {type: "google_maps"},
+    {type: "google_search"},
+    /*
+    {
+        type: "function",
+        description: "Tell the user what the important keywords in the response text are",
+        name: "highlight",
+        parameters: {
+            type: "object",
+            required: ["keywords"],
+            properties: {
+                keywords: {
+                    type: "array",
+                    items: {type: "string"},
+                    description: "An array of text strings that must be highlighted",
+                },
+            },
         },
     },
-})
-
-const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+    */
+]
+const body = verbose({model, input, tools, system_instruction: system})
 const res = await fetch(url, {
     body: JSON.stringify(body),
     method: "POST",
@@ -96,8 +106,34 @@ if (!res.ok) {
 }
 
 const json = verbose(await res.json())
-for (const candidate of json.candidates) {
-    for (const part of candidate.content.parts) {
-        pp(part.text)
+for (const step of json.steps) {
+    switch (step.type) {
+    case "model_output":
+        for (const content of step.content) {
+            pp(pretty(content.text.trim()))
+        }
+        break
+    default:
+        verbose(`[skipping step ${step.type}]`)
     }
+}
+
+function pretty(s) {
+    if (!process.stdout.isTTY) return s
+    // must come first: replaces numbers, passes below insert numbers
+    s = s.replace(/\d+/g, s => {
+        s = `\x1B[33m${s}\x1B[0m`
+        return s
+    })
+    s = s.replace(/([*][*].+?[*][*])/g, s => {
+        s = s.slice(2, -2)
+        s = `\x1B[1;31m${s}\x1B[0m`
+        return s
+    })
+    s = s.replace(/[*][^*]+[*]/g, s => {
+        s = s.slice(1, -1)
+        s = `\x1B[1m${s}\x1B[0m`
+        return s
+    })
+    return s
 }
