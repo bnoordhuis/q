@@ -35,10 +35,7 @@ while (args.length && args[0].startsWith("-")) {
                 break
             }
         }
-        if (!model) {
-            pp(`no such model: ${arg}`)
-            exit()
-        }
+        if (!model) model = arg // assume user knows best
         break
     case "-v":
         verbose = x => { pp(x); return x }
