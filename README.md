@@ -1,11 +1,7 @@
 q
 =
 
-quick way of querying google's gemini 2.0 flash llm from the command line
-
-```
-$ go build
-```
+quick way of querying google's gemini flash llm from the command line
 
 ```
 $ cp q /usr/local/bin # or anywhere else that's on your PATH
