@@ -18,7 +18,6 @@ const pp = console.log
 let verbose = x => x
 let model
 
-// first one is the default
 const models = `
     gemini-3.8-flash
     gemini-3.7-flash
@@ -29,6 +28,14 @@ const models = `
     gemini-2.5-flash
 `.trim().split(/\s+/)
 
+models.get = function(pattern) {
+    for (const model of this)
+        if (model.includes(pattern))
+            return model
+}
+// pick the first flash-lite model
+models.default = function() { return this.get("flash-lite") }
+
 const key = readFileSync(homedir() + "/.q", "utf8").trim()
 const args = process.argv.slice(2)
 
@@ -37,13 +44,7 @@ while (args.length && args[0].startsWith("-")) {
     switch (arg) {
     case "-m":
         arg = String(args.shift())
-        for (const s of models) {
-            if (s.includes(arg)) {
-                model = s
-                break
-            }
-        }
-        if (!model) model = arg // assume user knows best
+        model = models.get(arg) ?? arg // if no match, assume user knows best
         break
     case "-v":
         verbose = x => { pp(x); return x }
@@ -54,13 +55,14 @@ while (args.length && args[0].startsWith("-")) {
     case "-h":
         pp(`options:`)
         pp(` -h         this help message`)
-        pp(` -m <model> one of ${models.join(",")}`)
+        pp(` -m <model> one of: ${models.join(" ")}`)
+        pp(`            default: ${models.default()}`)
         pp(` -v         verbose mode`)
         exit()
     }
 }
 
-if (!model) model = models[0]
+if (!model) model = models.default()
 
 let input
 if (process.stdin.isTTY) {
