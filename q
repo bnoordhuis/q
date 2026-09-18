@@ -56,6 +56,7 @@ while (args.length && args[0].startsWith("-")) {
         pp(` -h         this help message`)
         pp(` -m <model> one of ${models.join(",")}`)
         pp(` -v         verbose mode`)
+        exit()
     }
 }
 
