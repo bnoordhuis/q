@@ -27,8 +27,7 @@ models.get = function(pattern) {
         if (model.name.includes(pattern))
             return model
 }
-// pick the first flash-lite model
-models.default = function() { return this.get("flash-lite") }
+models.default = function() { return this.get("openrouter/free") }
 
 let model
 const args = process.argv.slice(2)
