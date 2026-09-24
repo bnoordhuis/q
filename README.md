@@ -1,7 +1,8 @@
 q
 =
 
-quick way of querying google's gemini flash llm from the command line
+quick way of querying google gemini and openai compatible llms from the
+command line
 
 ```
 $ cp q /usr/local/bin # or anywhere else that's on your PATH
@@ -10,9 +11,28 @@ $ cp q /usr/local/bin # or anywhere else that's on your PATH
 
 ```
 $ cat > ~/.q
-<paste your api key here>
+{
+    "gemini": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/interactions",
+        "key": "superdupersecret",
+        "models": [
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash"
+        ]
+    },
+    "openrouter": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "key": "superdupersecret",
+        "models": ["openrouter/free"]
+    }
+}
 ```
-get one here: https://aistudio.google.com/app/apikey
+get a gemini key here: https://aistudio.google.com/app/apikey
+get an openrouter key here: https://openrouter.ai/openrouter/free
 
 ```
 $ q how many litres of water does the north sea contain

@@ -4,9 +4,17 @@ import {homedir} from "node:os"
 import {inspect} from "node:util"
 import {readFileSync} from "node:fs"
 import {text} from "node:stream/consumers"
+const pp = console.log
+let verbose = x => x
 inspect.defaultOptions.depth = 42
 
-const url = "https://generativelanguage.googleapis.com/v1beta/interactions"
+const config = JSON.parse(readFileSync(homedir() + "/.q", "utf8"))
+const models = []
+
+for (const [_, provider] of Object.entries(config))
+    for (const name of provider.models)
+        models.push({name, key:provider.key, url:provider.url})
+
 const system = `
     Use a brief style with short replies.
     Don't use markup unless asked to.
@@ -14,31 +22,16 @@ const system = `
     Don't use filler words.
 `.trim().replace(/\s+/g, ' ')
 
-const pp = console.log
-let verbose = x => x
-let model
-
-const models = `
-    gemini-3.8-flash
-    gemini-3.7-flash
-    gemini-3.6-flash
-    gemini-3.5-flash
-    gemini-3.5-flash-lite
-    gemini-3.1-flash-lite
-    gemini-2.5-flash
-`.trim().split(/\s+/)
-
 models.get = function(pattern) {
     for (const model of this)
-        if (model.includes(pattern))
+        if (model.name.includes(pattern))
             return model
 }
 // pick the first flash-lite model
 models.default = function() { return this.get("flash-lite") }
 
-const key = readFileSync(homedir() + "/.q", "utf8").trim()
+let model
 const args = process.argv.slice(2)
-
 while (args.length && args[0].startsWith("-")) {
     let arg = args.shift()
     switch (arg) {
@@ -55,14 +48,12 @@ while (args.length && args[0].startsWith("-")) {
     case "-h":
         pp(`options:`)
         pp(` -h         this help message`)
-        pp(` -m <model> one of: ${models.join(" ")}`)
-        pp(`            default: ${models.default()}`)
+        pp(` -m <model> one of: ${models.map(m => m.name).join(" ")}`)
+        pp(`            default: ${models.default().name}`)
         pp(` -v         verbose mode`)
         exit()
     }
 }
-
-if (!model) model = models.default()
 
 let input
 if (process.stdin.isTTY) {
@@ -71,53 +62,55 @@ if (process.stdin.isTTY) {
     input = await text(process.stdin)
 }
 
-const tools = [
-    {type: "google_maps"},
-    {type: "google_search"},
-    /*
-    {
-        type: "function",
-        description: "Tell the user what the important keywords in the response text are",
-        name: "highlight",
-        parameters: {
-            type: "object",
-            required: ["keywords"],
-            properties: {
-                keywords: {
-                    type: "array",
-                    items: {type: "string"},
-                    description: "An array of text strings that must be highlighted",
-                },
-            },
-        },
-    },
-    */
-]
-const body = verbose({model, input, tools, system_instruction: system})
-const res = await fetch(url, {
-    body: JSON.stringify(body),
-    method: "POST",
-    headers: {
-        "content-type": "application/json",
-        "x-goog-api-key": key,
-    },
-})
+if (!model) model = models.default()
+const isGemini = model.url.includes('https://generativelanguage.googleapis.com')
 
+const headers = {"content-type": "application/json"}
+if (isGemini) {
+    headers["x-goog-api-key"] = model.key
+} else {
+    headers["authorization"] = "Bearer " + model.key
+}
+
+let body
+if (isGemini) {
+    const tools = [
+        {type: "google_maps"},
+        {type: "google_search"},
+    ]
+    body = verbose({model: model.name, input, tools, system_instruction: system})
+} else {
+    const messages = [
+        {role: "system", content: system},
+        {role: "user", content: input},
+    ]
+    body = verbose({model: model.name, messages})
+}
+body = JSON.stringify(body)
+
+const res = await fetch(model.url, {method:"POST", headers, body})
 if (!res.ok) {
     pp(await res.text())
     exit(1)
 }
 
 const json = verbose(await res.json())
-for (const step of json.steps) {
-    switch (step.type) {
-    case "model_output":
-        for (const content of step.content) {
-            pp(pretty(content.text.trim()))
+if (isGemini) {
+    for (const step of json.steps) {
+        switch (step.type) {
+        case "model_output":
+            for (const content of step.content) {
+                pp(pretty(content.text.trim()))
+            }
+            break
+        default:
+            verbose(`[skipping step ${step.type}]`)
         }
-        break
-    default:
-        verbose(`[skipping step ${step.type}]`)
+    }
+} else {
+    for (const choice of json.choices || []) {
+        const msg = choice.message || {}
+        pp(pretty(msg.content || ""))
     }
 }
 
